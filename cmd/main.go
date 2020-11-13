@@ -1,39 +1,42 @@
 package main
 
 import (
-	"github.com/slayv1/http/pkg/server"
-    "net"
+	"github.com/slayv1/http/pkg/banners"
+	"github.com/slayv1/http/cmd/app"
+	"net"
+	"net/http"
 	"os"
+	
 )
 
-const header = "HTTP/1.1 200 OK\r\n" +
-	"Content-Length: %s\r\n" +
-	"Content-Type: %s\r\n" +
-	"Connection: close\r\n" +
-	"\r\n"
-
 func main() {
+	//обьявляем порт и хост
 	host := "0.0.0.0"
 	port := "9999"
 
+	//вызываем фукцию execute если получили ошибку то закрываем программу с ошибкой
 	if err := execute(host, port); err != nil {
 		os.Exit(1)
 	}
 }
 
-func execute(host, port string) (err error) {
-	srv := server.NewServer(net.JoinHostPort(host, port))
+func execute(h, p string) error {
+	//создаём новый мукс для хандлеров
+	mux := http.NewServeMux()
+	//создаём новый сервис
+	bnrSvc := banners.NewService()
 
-	/* srv.Register("/", func(conn net.Conn) {
-		body := "Welcome to our website"
-		ctl := strconv.Itoa(len(body))
-		log.Println(ctl)
-		_, err = conn.Write([]byte(fmt.Sprintf(header, ctl, "text/html") + body))
+	//создаём новый сервер с сервисами
+	sr := app.NewServer(mux, bnrSvc)
 
-		if err != nil {
-			log.Println(err)
-		}
-	}) */
+	//инициализируем сервер и регистрируем новый роутеры
+	sr.Init()
 
-	return srv.Start()
+	//создаём новый HTTP server
+	srv := &http.Server{
+		Addr:    net.JoinHostPort(h, p),
+		Handler: sr,
+	}
+	//запускаем сервер и если получим ошибку то его вернем в резултать
+	return srv.ListenAndServe()
 }
